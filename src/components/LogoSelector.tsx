@@ -75,13 +75,10 @@ export const LogoSelector: React.FC<LogoSelectorProps> = ({ onSelectStamp }) => 
 
     // Draw stamp text
     ctx.fillStyle = color;
-    ctx.font = 'bold 22px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
+    ctx.font = 'bold 32px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('IMS MARKETING', 150, 44);
-    
-    ctx.font = 'bold 24px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
-    ctx.fillText(text, 150, 78);
+    ctx.fillText(text, 150, 60);
 
     ctx.restore();
 
