@@ -34,7 +34,13 @@ export default function App() {
   const [docName, setDocName] = useState<string>('');
 
   // Active side panel tab
-  const [sidebarTab, setSidebarTab] = useState<'pages' | 'stamps'>('pages');
+  const [sidebarTab, setSidebarTab] = useState<'pages' | 'stamps' | 'signatures'>('pages');
+
+  // Saved signatures list
+  const [savedSignatures, setSavedSignatures] = useState<string[]>(() => {
+    const saved = localStorage.getItem('ims_signatures');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Annotation states
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -338,6 +344,84 @@ export default function App() {
   // Insert signature
   const handleApplySignature = (sigUrl: string) => {
     setStampDataUrl(sigUrl);
+    if (!savedSignatures.includes(sigUrl)) {
+      const updated = [sigUrl, ...savedSignatures].slice(0, 5);
+      setSavedSignatures(updated);
+      localStorage.setItem('ims_signatures', JSON.stringify(updated));
+    }
+  };
+
+  // Append another PDF (Merge)
+  const handleAppendPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !pdfBytes) return;
+    setLoading(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const appendBytes = event.target?.result as ArrayBuffer;
+        const currentDoc = await PDFDocument.load(pdfBytes);
+        const extraDoc = await PDFDocument.load(appendBytes);
+        
+        const copiedPages = await currentDoc.copyPages(extraDoc, extraDoc.getPageIndices());
+        copiedPages.forEach((page) => currentDoc.addPage(page));
+        
+        const mergedPdfBytes = await currentDoc.save();
+        const arrayBufferFinal = mergedPdfBytes.buffer as ArrayBuffer;
+        
+        setPdfBytes(arrayBufferFinal);
+        const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBufferFinal) }).promise;
+        setPdfDoc(doc);
+        setTotalPages(doc.numPages);
+        
+        setCurrentPage(totalPages + 1);
+      } catch (err) {
+        console.error('Failed merging PDFs:', err);
+        alert('Could not merge the selected PDF. Make sure it is a valid document.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  // Delete a page (Split)
+  const handleDeletePage = async (pageNumber: number) => {
+    if (!pdfBytes || totalPages <= 1) return;
+    setLoading(true);
+    try {
+      const currentDoc = await PDFDocument.load(pdfBytes);
+      currentDoc.removePage(pageNumber - 1);
+      
+      const modifiedPdfBytes = await currentDoc.save();
+      const arrayBuffer = modifiedPdfBytes.buffer as ArrayBuffer;
+      
+      const updatedAnnotations = annotations
+        .filter((ann) => ann.pageNumber !== pageNumber)
+        .map((ann) => {
+          if (ann.pageNumber > pageNumber) {
+            return { ...ann, pageNumber: ann.pageNumber - 1 };
+          }
+          return ann;
+        });
+      
+      setAnnotations(updatedAnnotations);
+      pushToHistory(updatedAnnotations);
+      
+      setPdfBytes(arrayBuffer);
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+      setPdfDoc(doc);
+      setTotalPages(doc.numPages);
+      
+      if (currentPage > doc.numPages) {
+        setCurrentPage(doc.numPages);
+      }
+    } catch (err) {
+      console.error('Failed deleting page:', err);
+      alert('Could not delete the page.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Close signature and switch active tool
@@ -504,20 +588,86 @@ export default function App() {
                   style={sidebarTab === 'stamps' ? activeSidebarTabStyle : sidebarTabBtnStyle}
                   onClick={() => setSidebarTab('stamps')}
                 >
-                  IMS Stamps
+                  Stamps
+                </button>
+                <button
+                  style={sidebarTab === 'signatures' ? activeSidebarTabStyle : sidebarTabBtnStyle}
+                  onClick={() => setSidebarTab('signatures')}
+                >
+                  Signatures
                 </button>
               </div>
 
               <div style={sidebarBodyStyle}>
-                {sidebarTab === 'pages' ? (
-                  <SidebarThumbnails
-                    pdfDocument={pdfDoc}
-                    currentPage={currentPage}
-                    onPageChange={setCurrentPage}
-                    totalPages={totalPages}
-                  />
-                ) : (
+                {sidebarTab === 'pages' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)' }}>
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        id="pdf-appender"
+                        style={{ display: 'none' }}
+                        onChange={handleAppendPdf}
+                      />
+                      <label htmlFor="pdf-appender" style={appendPdfButtonStyle}>
+                        + Append / Merge PDF
+                      </label>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                      <SidebarThumbnails
+                        pdfDocument={pdfDoc}
+                        currentPage={currentPage}
+                        onPageChange={setCurrentPage}
+                        totalPages={totalPages}
+                        onDeletePage={handleDeletePage}
+                      />
+                    </div>
+                  </div>
+                )}
+                {sidebarTab === 'stamps' && (
                   <LogoSelector onSelectStamp={handleSelectStamp} />
+                )}
+                {sidebarTab === 'signatures' && (
+                  <div style={signaturesPanelStyle}>
+                    <button style={createSigButtonStyle} onClick={() => setIsSigModalOpen(true)}>
+                      + Create New Signature
+                    </button>
+                    
+                    <div style={savedSigsHeaderStyle}>Saved Signatures</div>
+                    {savedSignatures.length === 0 ? (
+                      <div style={emptySigsStyle}>
+                        No signatures saved. Click above to draw or type a signature.
+                      </div>
+                    ) : (
+                      <div style={sigsGridStyle}>
+                        {savedSignatures.map((sig, idx) => (
+                          <div key={idx} style={sigCardWrapperStyle}>
+                            <button
+                              style={sigCardStyle}
+                              onClick={() => {
+                                setStampDataUrl(sig);
+                                setActiveTool('signature');
+                              }}
+                              title="Click to select signature, then click on PDF to place it"
+                            >
+                              <img src={sig} alt={`Signature ${idx + 1}`} style={sigImgStyle} />
+                            </button>
+                            <button
+                              style={deleteSigIconStyle}
+                              onClick={() => {
+                                const updated = savedSignatures.filter((_, i) => i !== idx);
+                                setSavedSignatures(updated);
+                                localStorage.setItem('ims_signatures', JSON.stringify(updated));
+                              }}
+                              title="Remove saved signature"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </aside>
@@ -550,6 +700,25 @@ export default function App() {
                   onClearAnnotations={handleClearPageAnnotations}
                 />
               </div>
+
+              {/* Tool Helper Banner */}
+              {activeTool !== 'select' && (
+                <div style={toolHelperBannerStyle}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-brand)', animation: 'pulse-subtle 1.5s infinite' }} />
+                    {activeTool === 'text' && "Text Tool Active: Click anywhere on the document page to type and place text."}
+                    {activeTool === 'draw' && "Pencil Tool Active: Click and drag on the document page to draw."}
+                    {activeTool === 'signature' && "Signature Selected: Click anywhere on the document page to stamp your signature."}
+                    {activeTool === 'stamp' && "Stamp Selected: Click anywhere on the document page to stamp the logo."}
+                    {activeTool === 'rectangle' && "Rectangle Tool Active: Click and drag to draw a box."}
+                    {activeTool === 'ellipse' && "Ellipse Tool Active: Click and drag to draw an oval."}
+                    {activeTool === 'arrow' && "Arrow Tool Active: Click and drag to draw an arrow."}
+                  </span>
+                  <button style={cancelToolBtnStyle} onClick={() => { setActiveTool('select'); setStampDataUrl(null); }}>
+                    Exit Tool
+                  </button>
+                </div>
+              )}
 
               {/* PDF View Canvas container */}
               <div style={viewportScrollStyle}>
@@ -1117,4 +1286,137 @@ const deletePropBtn: React.CSSProperties = {
   cursor: 'pointer',
   transition: 'all 0.2s',
   outline: 'none',
+};
+
+const appendPdfButtonStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+  width: '100%',
+  padding: '8px 12px',
+  backgroundColor: 'rgba(255, 107, 74, 0.08)',
+  border: '1px dashed var(--color-brand)',
+  borderRadius: 'var(--radius-sm)',
+  color: 'var(--color-brand)',
+  cursor: 'pointer',
+  fontWeight: 600,
+  fontSize: '11px',
+  transition: 'all 0.2s',
+  textAlign: 'center',
+};
+
+const signaturesPanelStyle: React.CSSProperties = {
+  padding: '14px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '14px',
+};
+
+const createSigButtonStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  backgroundColor: 'var(--color-brand)',
+  color: 'white',
+  border: 'none',
+  borderRadius: 'var(--radius-md)',
+  fontWeight: 600,
+  fontSize: '13px',
+  cursor: 'pointer',
+  boxShadow: '0 4px 10px var(--color-brand-glow)',
+  transition: 'all 0.2s',
+};
+
+const savedSigsHeaderStyle: React.CSSProperties = {
+  fontSize: '11px',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: 'var(--text-secondary)',
+  marginTop: '6px',
+};
+
+const emptySigsStyle: React.CSSProperties = {
+  fontSize: '11px',
+  color: 'var(--text-muted)',
+  textAlign: 'center',
+  padding: '24px 12px',
+  border: '1px dashed var(--border-color)',
+  borderRadius: 'var(--radius-md)',
+  backgroundColor: 'rgba(255,255,255,0.01)',
+};
+
+const sigsGridStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+};
+
+const sigCardWrapperStyle: React.CSSProperties = {
+  position: 'relative',
+  display: 'flex',
+};
+
+const sigCardStyle: React.CSSProperties = {
+  flex: 1,
+  height: '64px',
+  backgroundColor: 'white',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-sm)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  padding: '6px',
+  overflow: 'hidden',
+  transition: 'all 0.2s',
+  outline: 'none',
+};
+
+const sigImgStyle: React.CSSProperties = {
+  maxWidth: '100%',
+  maxHeight: '100%',
+  objectFit: 'contain',
+  filter: 'contrast(1.15)',
+};
+
+const deleteSigIconStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '-6px',
+  right: '-6px',
+  width: '16px',
+  height: '16px',
+  borderRadius: '50%',
+  backgroundColor: '#ef4444',
+  color: 'white',
+  border: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+  zIndex: 5,
+};
+
+const toolHelperBannerStyle: React.CSSProperties = {
+  backgroundColor: 'var(--color-brand-light)',
+  borderBottom: '1px solid var(--color-brand)',
+  padding: '8px 24px',
+  fontSize: '12px',
+  fontWeight: 600,
+  color: 'var(--color-brand)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+};
+
+const cancelToolBtnStyle: React.CSSProperties = {
+  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  border: '1px solid var(--color-brand)',
+  borderRadius: '4px',
+  color: 'var(--color-brand)',
+  padding: '2px 8px',
+  fontSize: '11px',
+  cursor: 'pointer',
+  transition: 'all 0.2s',
 };

@@ -1,19 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-import { Layers } from 'lucide-react';
+import { Layers, Trash2 } from 'lucide-react';
 
 interface SidebarThumbnailsProps {
   pdfDocument: pdfjsLib.PDFDocumentProxy | null;
   currentPage: number;
   onPageChange: (pageNum: number) => void;
   totalPages: number;
+  onDeletePage: (pageNum: number) => void;
 }
 
 export const SidebarThumbnails: React.FC<SidebarThumbnailsProps> = ({
   pdfDocument,
   currentPage,
   onPageChange,
-  totalPages
+  totalPages,
+  onDeletePage
 }) => {
   if (!pdfDocument) return null;
 
@@ -34,6 +36,8 @@ export const SidebarThumbnails: React.FC<SidebarThumbnailsProps> = ({
               pageNumber={pageNumber}
               isActive={currentPage === pageNumber}
               onClick={() => onPageChange(pageNumber)}
+              onDeletePage={onDeletePage}
+              showDelete={totalPages > 1}
             />
           );
         })}
@@ -47,13 +51,17 @@ interface ThumbnailItemProps {
   pageNumber: number;
   isActive: boolean;
   onClick: () => void;
+  onDeletePage: (pageNum: number) => void;
+  showDelete: boolean;
 }
 
 const ThumbnailItem: React.FC<ThumbnailItemProps> = ({
   pdfDocument,
   pageNumber,
   isActive,
-  onClick
+  onClick,
+  onDeletePage,
+  showDelete
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,7 +116,7 @@ const ThumbnailItem: React.FC<ThumbnailItemProps> = ({
       }}
       onClick={onClick}
     >
-      <div style={thumbnailContainerStyle}>
+      <div style={thumbnailContainerStyle} className="thumbnail-container-hover">
         {loading && <div style={loaderStyle} />}
         <canvas
           ref={canvasRef}
@@ -118,6 +126,20 @@ const ThumbnailItem: React.FC<ThumbnailItemProps> = ({
             aspectRatio: `${1 / ratio}`
           }}
         />
+        {showDelete && !loading && (
+          <button
+            style={deleteBtnStyle}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm(`Are you sure you want to delete Page ${pageNumber}? This will split the PDF document.`)) {
+                onDeletePage(pageNumber);
+              }
+            }}
+            title={`Delete Page ${pageNumber}`}
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
       </div>
       <span
         style={{
@@ -210,4 +232,23 @@ const loaderStyle: React.CSSProperties = {
 const pageNumberStyle: React.CSSProperties = {
   marginTop: '8px',
   fontSize: '12px',
+};
+
+const deleteBtnStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '4px',
+  right: '4px',
+  width: '22px',
+  height: '22px',
+  borderRadius: '50%',
+  backgroundColor: 'rgba(239, 68, 68, 0.95)',
+  color: 'white',
+  border: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.2s',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+  zIndex: 10,
 };
