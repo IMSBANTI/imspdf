@@ -508,10 +508,10 @@ export default function App() {
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             style={themeToggleButtonStyle}
-            title={theme === 'dark' ? 'Switch to White Mode' : 'Switch to Dark Mode'}
+            title={theme === 'dark' ? 'Switch to Day Mode' : 'Switch to Dark Mode'}
           >
             {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-            <span>{theme === 'dark' ? 'White Mode' : 'Dark Mode'}</span>
+            <span>{theme === 'dark' ? 'Day Mode' : 'Dark Mode'}</span>
           </button>
 
           <div style={badgeStyle}>

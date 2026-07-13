@@ -509,16 +509,16 @@ const clearButtonStyle: React.CSSProperties = {
   position: 'absolute',
   top: '12px',
   right: '12px',
-  background: 'rgba(15, 23, 42, 0.8)',
+  background: 'rgba(15, 23, 42, 0.85)',
   backdropFilter: 'blur(4px)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  color: 'var(--text-primary)',
+  border: '1px solid rgba(255, 255, 255, 0.15)',
+  color: '#ffffff',
   padding: '4px 10px',
   fontSize: '11px',
   fontWeight: 500,
   borderRadius: '4px',
   cursor: 'pointer',
-  transition: 'all 0.2s',
+  transition: 'background-color 0.2s',
 };
 
 const typeWrapperStyle: React.CSSProperties = {
