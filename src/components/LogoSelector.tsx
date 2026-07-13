@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Award, FileText, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Upload, DollarSign, FileText, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 interface LogoSelectorProps {
   onSelectStamp: (stampDataUrl: string) => void;
@@ -33,10 +33,6 @@ export const LogoSelector: React.FC<LogoSelectorProps> = ({ onSelectStamp }) => 
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw background/border
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 5;
-
     const drawRoundRectPath = (x: number, y: number, w: number, h: number, r: number) => {
       ctx.beginPath();
       ctx.moveTo(x + r, y);
@@ -47,38 +43,73 @@ export const LogoSelector: React.FC<LogoSelectorProps> = ({ onSelectStamp }) => 
       ctx.closePath();
     };
 
+    // Pre-rotate the canvas content by a dynamic angle for stamp look (-7 degrees)
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(-7 * Math.PI / 180);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
     if (borderType === 'rounded') {
-      drawRoundRectPath(10, 10, 280, 100, 15);
+      drawRoundRectPath(12, 12, 276, 96, 15);
       ctx.stroke();
       
       // inner subtle border
-      ctx.lineWidth = 1.5;
-      drawRoundRectPath(16, 16, 268, 88, 10);
+      ctx.lineWidth = 1.8;
+      drawRoundRectPath(20, 20, 260, 80, 10);
       ctx.stroke();
     } else if (borderType === 'circle') {
       // draw circle/ellipse
       ctx.beginPath();
-      ctx.ellipse(150, 60, 120, 50, 0, 0, 2 * Math.PI);
+      ctx.ellipse(150, 60, 120, 45, 0, 0, 2 * Math.PI);
       ctx.stroke();
     } else {
-      ctx.strokeRect(10, 10, 280, 100);
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(16, 16, 268, 88);
+      ctx.strokeRect(12, 12, 276, 96);
+      ctx.lineWidth = 1.8;
+      ctx.strokeRect(20, 20, 260, 80);
     }
 
     // Draw stamp text
     ctx.fillStyle = color;
-    ctx.font = 'bold 24px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
+    ctx.font = 'bold 22px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.fillText('IMS MARKETING', 150, 44);
     
-    // Add dynamic angle for stamp look
-    // Rotate canvas slightly to make it look like a physical stamp
-    // However, to keep coordinates simple we just print directly
-    
-    ctx.fillText('IMS MARKETING', 150, 42);
-    ctx.font = 'bold 20px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
+    ctx.font = 'bold 24px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
     ctx.fillText(text, 150, 78);
+
+    ctx.restore();
+
+    // Create rubber stamp distressed/grit noise effect
+    ctx.globalCompositeOperation = 'destination-out';
+    
+    // Draw 240 tiny random holes to simulate ink bleeding/fading
+    for (let i = 0; i < 240; i++) {
+      const nx = Math.random() * canvas.width;
+      const ny = Math.random() * canvas.height;
+      const nr = 0.8 + Math.random() * 1.5; // speckle size
+      ctx.beginPath();
+      ctx.arc(nx, ny, nr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw random scratch lines
+    ctx.lineWidth = 0.8 + Math.random() * 1.2;
+    for (let i = 0; i < 10; i++) {
+      const lx = Math.random() * canvas.width;
+      const ly = Math.random() * canvas.height;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(lx + (Math.random() - 0.5) * 35, ly + (Math.random() - 0.5) * 8);
+      ctx.stroke();
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
 
     onSelectStamp(canvas.toDataURL('image/png'));
   };
@@ -155,16 +186,16 @@ export const LogoSelector: React.FC<LogoSelectorProps> = ({ onSelectStamp }) => 
           </div>
         </button>
 
-        {/* Marketing Stamp */}
+        {/* Paid Stamp */}
         <button
-          style={{ ...stampCardStyle, borderLeft: '4px solid #3b82f6' }}
-          onClick={() => generateStamp('CAMPAIGN', '#3b82f6', 'rounded')}
-          title="Insert Campaign stamp"
+          style={{ ...stampCardStyle, borderLeft: '4px solid #15803d' }}
+          onClick={() => generateStamp('PAID', '#15803d', 'rounded')}
+          title="Insert Paid stamp"
         >
-          <Award size={18} style={{ color: '#3b82f6' }} />
+          <DollarSign size={18} style={{ color: '#15803d' }} />
           <div style={stampLabelContainer}>
-            <span style={stampTitle}>Campaign Rev</span>
-            <span style={stampDesc}>Indigo branding</span>
+            <span style={stampTitle}>Paid Copy</span>
+            <span style={stampDesc}>Creative green stamp</span>
           </div>
         </button>
       </div>
