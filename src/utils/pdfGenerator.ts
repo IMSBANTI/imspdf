@@ -27,7 +27,7 @@ export const exportAnnotatedPdf = async (
   annotations: Annotation[]
 ): Promise<Uint8Array> => {
   // Load original PDF
-  const pdfDoc = await PDFDocument.load(originalPdfArrayBuffer);
+  const pdfDoc = await PDFDocument.load(originalPdfArrayBuffer, { ignoreEncryption: true });
   const pages = pdfDoc.getPages();
 
   // Load standard fonts

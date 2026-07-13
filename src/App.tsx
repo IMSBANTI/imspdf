@@ -360,8 +360,8 @@ export default function App() {
     reader.onload = async (event) => {
       try {
         const appendBytes = event.target?.result as ArrayBuffer;
-        const currentDoc = await PDFDocument.load(pdfBytes);
-        const extraDoc = await PDFDocument.load(appendBytes);
+        const currentDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const extraDoc = await PDFDocument.load(appendBytes, { ignoreEncryption: true });
         
         const copiedPages = await currentDoc.copyPages(extraDoc, extraDoc.getPageIndices());
         copiedPages.forEach((page) => currentDoc.addPage(page));
@@ -377,7 +377,7 @@ export default function App() {
         setCurrentPage(totalPages + 1);
       } catch (err) {
         console.error('Failed merging PDFs:', err);
-        alert('Could not merge the selected PDF. Make sure it is a valid document.');
+        alert('Could not merge the selected PDF: ' + (err instanceof Error ? err.message : String(err)));
       } finally {
         setLoading(false);
       }
@@ -390,7 +390,7 @@ export default function App() {
     if (!pdfBytes || totalPages <= 1) return;
     setLoading(true);
     try {
-      const currentDoc = await PDFDocument.load(pdfBytes);
+      const currentDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
       currentDoc.removePage(pageNumber - 1);
       
       const modifiedPdfBytes = await currentDoc.save();
@@ -418,7 +418,7 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed deleting page:', err);
-      alert('Could not delete the page.');
+      alert('Could not delete the page: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);
     }
