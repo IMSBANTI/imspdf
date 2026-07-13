@@ -256,7 +256,7 @@ export default function App() {
       page.drawText('Date Signed', { x: 362, y: 55, size: 9, font: fontRegular, color: mutedText });
 
       const finalBytes = await sampleDoc.save();
-      const arrayBuffer = finalBytes.buffer;
+      const arrayBuffer = finalBytes.buffer.slice(finalBytes.byteOffset, finalBytes.byteOffset + finalBytes.byteLength);
       setPdfBytes(arrayBuffer as ArrayBuffer);
 
       const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
@@ -367,7 +367,7 @@ export default function App() {
         copiedPages.forEach((page) => currentDoc.addPage(page));
         
         const mergedPdfBytes = await currentDoc.save();
-        const arrayBufferFinal = mergedPdfBytes.buffer as ArrayBuffer;
+        const arrayBufferFinal = mergedPdfBytes.buffer.slice(mergedPdfBytes.byteOffset, mergedPdfBytes.byteOffset + mergedPdfBytes.byteLength) as ArrayBuffer;
         
         setPdfBytes(arrayBufferFinal);
         const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBufferFinal) }).promise;
@@ -394,7 +394,7 @@ export default function App() {
       currentDoc.removePage(pageNumber - 1);
       
       const modifiedPdfBytes = await currentDoc.save();
-      const arrayBuffer = modifiedPdfBytes.buffer as ArrayBuffer;
+      const arrayBuffer = modifiedPdfBytes.buffer.slice(modifiedPdfBytes.byteOffset, modifiedPdfBytes.byteOffset + modifiedPdfBytes.byteLength) as ArrayBuffer;
       
       const updatedAnnotations = annotations
         .filter((ann) => ann.pageNumber !== pageNumber)
