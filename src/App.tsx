@@ -1100,15 +1100,15 @@ const sidebarStyle: React.CSSProperties = {
 
 const sidebarTabsStyle: React.CSSProperties = {
   display: 'flex',
-  padding: '12px 16px',
-  gap: '8px',
+  padding: '12px 8px',
+  gap: '4px',
   borderBottom: '1px solid var(--border-color)',
 };
 
 const sidebarTabBtnStyle: React.CSSProperties = {
   flex: 1,
-  padding: '6px 12px',
-  fontSize: '12px',
+  padding: '6px 2px',
+  fontSize: '11px',
   fontWeight: 500,
   color: 'var(--text-secondary)',
   background: 'none',
