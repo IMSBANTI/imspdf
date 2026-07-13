@@ -4,7 +4,6 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { 
   FileUp, 
   Settings, 
-  Sparkles, 
   FileText,
   Lock,
   Layers,
@@ -161,8 +160,21 @@ export default function App() {
       const darkSlate = rgb(15/255, 23/255, 42/255);
       const mutedText = rgb(100/255, 116/255, 139/255);
 
-      // IMS header
-      page.drawText('IMS', { x: 50, y: 720, size: 28, font: fontBold, color: orangeBrand });
+      // IMS header logo embedding
+      try {
+        const logoRes = await fetch('/ims_logo.png');
+        const logoBuf = await logoRes.arrayBuffer();
+        const embeddedLogo = await sampleDoc.embedPng(logoBuf);
+        page.drawImage(embeddedLogo, {
+          x: 50,
+          y: 708,
+          width: 58,
+          height: 44,
+        });
+      } catch (e) {
+        console.error('Failed embedding logo in sample PDF:', e);
+        page.drawText('IMS', { x: 50, y: 720, size: 28, font: fontBold, color: orangeBrand });
+      }
       page.drawText('INTEGRATED MARKETING SERVICE', { x: 120, y: 728, size: 10, font: fontBold, color: darkSlate });
       page.drawText('Secure Employee Review & Sign-Off Portal', { x: 120, y: 712, size: 9, font: fontRegular, color: mutedText });
 
@@ -381,7 +393,8 @@ export default function App() {
       {/* Navbar header */}
       <header style={headerStyle} className="glass-panel">
         <div style={logoWrapperStyle}>
-          <div style={logoSymbolStyle}>IMS</div>
+          <img src="/ims_logo.png" alt="IMS Logo" style={{ height: '36px', objectFit: 'contain' }} />
+          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', margin: '0 4px 0 8px' }} />
           <div>
             <h1 style={logoTextStyle}>PDF Studio</h1>
             <span style={secureLabelStyle}>Secure Employee Editor</span>
@@ -420,9 +433,7 @@ export default function App() {
               <div style={glowEffectStyle} />
               
               <div style={landingHeaderStyle}>
-                <div style={sparkleIconStyle}>
-                  <Sparkles size={24} style={{ color: 'white' }} />
-                </div>
+                <img src="/ims_logo.png" alt="IMS Logo" style={{ height: '70px', objectFit: 'contain', marginBottom: '16px' }} />
                 <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>
                   Integrated Marketing Service
                 </h2>
@@ -714,16 +725,6 @@ const logoWrapperStyle: React.CSSProperties = {
   gap: '12px',
 };
 
-const logoSymbolStyle: React.CSSProperties = {
-  backgroundColor: 'var(--color-brand)',
-  color: 'white',
-  fontWeight: 800,
-  fontSize: '16px',
-  padding: '6px 10px',
-  borderRadius: '8px',
-  boxShadow: '0 4px 10px var(--color-brand-glow)',
-  letterSpacing: '0.05em',
-};
 
 const logoTextStyle: React.CSSProperties = {
   fontSize: '15px',
@@ -833,17 +834,6 @@ const landingHeaderStyle: React.CSSProperties = {
   marginBottom: '24px',
 };
 
-const sparkleIconStyle: React.CSSProperties = {
-  width: '48px',
-  height: '48px',
-  borderRadius: '50%',
-  backgroundColor: 'var(--color-brand)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  margin: '0 auto 16px auto',
-  boxShadow: '0 8px 16px var(--color-brand-glow)',
-};
 
 const dropzoneStyle: React.CSSProperties = {
   position: 'relative',

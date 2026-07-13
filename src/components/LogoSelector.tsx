@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Upload, Award, FileText, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 interface LogoSelectorProps {
@@ -7,6 +7,21 @@ interface LogoSelectorProps {
 
 export const LogoSelector: React.FC<LogoSelectorProps> = ({ onSelectStamp }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [imsLogoBase64, setImsLogoBase64] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch and convert ims logo to base64
+    fetch('/ims_logo.png')
+      .then(res => res.blob())
+      .then(blob => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImsLogoBase64(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch(err => console.error("Error loading logo asset:", err));
+  }, []);
 
   // Helper to generate a text-based stamp on canvas and return as data URL
   const generateStamp = (text: string, color: string, borderType: 'rect' | 'rounded' | 'circle' = 'rect') => {
@@ -78,6 +93,21 @@ export const LogoSelector: React.FC<LogoSelectorProps> = ({ onSelectStamp }) => 
       <h4 style={headingStyle}>IMS Logo & Stamps</h4>
       
       <div style={gridStyle}>
+        {/* IMS Logo Stamp */}
+        {imsLogoBase64 && (
+          <button
+            style={{ ...stampCardStyle, borderLeft: '4px solid #ef4444', gridColumn: 'span 2' }}
+            onClick={() => onSelectStamp(imsLogoBase64)}
+            title="Insert IMS Logo Stamp"
+          >
+            <img src="/ims_logo.png" alt="IMS Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+            <div style={stampLabelContainer}>
+              <span style={stampTitle}>IMS Corporate Logo</span>
+              <span style={stampDesc}>Insert corporate branding image</span>
+            </div>
+          </button>
+        )}
+
         {/* Approved Stamp */}
         <button
           style={{ ...stampCardStyle, borderLeft: '4px solid #ff6b4a' }}
