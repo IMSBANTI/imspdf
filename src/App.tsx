@@ -128,7 +128,7 @@ export default function App() {
       setPdfBytes(arrayBuffer as ArrayBuffer);
 
       try {
-        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) });
         const doc = await loadingTask.promise;
         setPdfDoc(doc);
         setTotalPages(doc.numPages);
@@ -259,7 +259,7 @@ export default function App() {
       const arrayBuffer = finalBytes.buffer.slice(finalBytes.byteOffset, finalBytes.byteOffset + finalBytes.byteLength);
       setPdfBytes(arrayBuffer as ArrayBuffer);
 
-      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) }).promise;
       setPdfDoc(doc);
       setTotalPages(doc.numPages);
       setCurrentPage(1);
@@ -370,7 +370,7 @@ export default function App() {
         const arrayBufferFinal = mergedPdfBytes.buffer.slice(mergedPdfBytes.byteOffset, mergedPdfBytes.byteOffset + mergedPdfBytes.byteLength) as ArrayBuffer;
         
         setPdfBytes(arrayBufferFinal);
-        const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBufferFinal) }).promise;
+        const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBufferFinal.slice(0)) }).promise;
         setPdfDoc(doc);
         setTotalPages(doc.numPages);
         
@@ -409,7 +409,7 @@ export default function App() {
       pushToHistory(updatedAnnotations);
       
       setPdfBytes(arrayBuffer);
-      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) }).promise;
       setPdfDoc(doc);
       setTotalPages(doc.numPages);
       
