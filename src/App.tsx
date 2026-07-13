@@ -517,7 +517,7 @@ export default function App() {
               <div style={glowEffectStyle} />
               
               <div style={landingHeaderStyle}>
-                <img src="/ims_logo.png" alt="IMS Logo" style={{ height: '70px', objectFit: 'contain', marginBottom: '16px' }} />
+                <img src="/ims_logo.png" alt="IMS Logo" style={{ height: '64px', objectFit: 'contain', display: 'block', margin: '0 auto 16px auto' }} />
                 <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>
                   Integrated Marketing Service
                 </h2>
@@ -1001,6 +1001,7 @@ const landingHeaderStyle: React.CSSProperties = {
   position: 'relative',
   zIndex: 2,
   marginBottom: '24px',
+  paddingTop: '16px',
 };
 
 
