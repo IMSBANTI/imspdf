@@ -14,6 +14,9 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
   const [typeText, setTypeText] = useState('');
   const [typeFont, setTypeFont] = useState<'cursive-1' | 'cursive-2' | 'serif'>('cursive-1');
   const [sigColor, setSigColor] = useState('#0f172a'); // default black/slate
+  const [sigName, setSigName] = useState('');
+  const [sigDesignation, setSigDesignation] = useState('');
+  const [sigDept, setSigDept] = useState('');
 
   // Initialize canvas with proper DPI scaling
   useEffect(() => {
@@ -100,12 +103,12 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
 
   // Compile and Save
   const handleSave = () => {
+    const hasMetadata = sigName.trim() || sigDesignation.trim() || sigDept.trim();
+
     if (tab === 'draw') {
       const canvas = canvasRef.current;
       if (!canvas) return;
       
-      // Check if canvas is empty before saving
-      // (simple check: check if any pixels are transparent/drawn)
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       const buffer = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -116,21 +119,72 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
         return;
       }
       
-      // Export canvas to transparent PNG
-      const dataUrl = canvas.toDataURL('image/png');
-      onSave(dataUrl);
-      onClose();
+      if (!hasMetadata) {
+        // Export canvas to transparent PNG directly
+        const dataUrl = canvas.toDataURL('image/png');
+        onSave(dataUrl);
+        onClose();
+      } else {
+        // Create a taller compound canvas (550 width, 330 height)
+        const compoundCanvas = document.createElement('canvas');
+        compoundCanvas.width = 550;
+        compoundCanvas.height = 330;
+        const cCtx = compoundCanvas.getContext('2d');
+        if (cCtx) {
+          cCtx.clearRect(0, 0, compoundCanvas.width, compoundCanvas.height);
+          
+          // Copy drawn signature to the top portion of the compound canvas
+          cCtx.drawImage(canvas, 0, 0);
+          
+          // Draw thin divider line
+          cCtx.strokeStyle = '#cbd5e1';
+          cCtx.lineWidth = 1.5;
+          cCtx.beginPath();
+          cCtx.moveTo(40, 230);
+          cCtx.lineTo(510, 230);
+          cCtx.stroke();
+          
+          // Draw metadata
+          cCtx.fillStyle = sigColor;
+          cCtx.textAlign = 'center';
+          cCtx.textBaseline = 'top';
+          
+          let currentY = 245;
+          if (sigName.trim()) {
+            cCtx.font = 'bold 15px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
+            cCtx.fillText(sigName.trim(), 275, currentY);
+            currentY += 22;
+          }
+          
+          const metaParts = [];
+          if (sigDesignation.trim()) metaParts.push(sigDesignation.trim());
+          if (sigDept.trim()) metaParts.push(sigDept.trim());
+          if (metaParts.length > 0) {
+            cCtx.font = '12px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
+            cCtx.fillStyle = '#64748b'; // slate gray
+            cCtx.fillText(metaParts.join(' | '), 275, currentY);
+          }
+          
+          const dataUrl = compoundCanvas.toDataURL('image/png');
+          onSave(dataUrl);
+          onClose();
+        }
+      }
     } else {
       if (!typeText.trim()) {
         alert('Please type your signature.');
         return;
       }
 
-      // Create a temporary canvas to draw the stylized text
+      // Create a temporary canvas
+      const width = 600;
+      const height = hasMetadata ? 310 : 200;
+      
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = 600;
-      tempCanvas.height = 200;
+      tempCanvas.width = width;
+      tempCanvas.height = height;
       const ctx = tempCanvas.getContext('2d');
+      
       if (ctx) {
         ctx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
         ctx.fillStyle = sigColor;
@@ -142,9 +196,41 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
         ctx.font = fontStyle;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(typeText, tempCanvas.width / 2, tempCanvas.height / 2);
         
-        // Export to PNG
+        // Draw typed signature centered horizontally at Y = 100
+        ctx.fillText(typeText, 300, 100);
+        
+        if (hasMetadata) {
+          // Draw thin divider line
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(50, 210);
+          ctx.lineTo(550, 210);
+          ctx.stroke();
+          
+          // Draw metadata
+          ctx.fillStyle = sigColor;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          
+          let currentY = 225;
+          if (sigName.trim()) {
+            ctx.font = 'bold 15px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
+            ctx.fillText(sigName.trim(), 300, currentY);
+            currentY += 22;
+          }
+          
+          const metaParts = [];
+          if (sigDesignation.trim()) metaParts.push(sigDesignation.trim());
+          if (sigDept.trim()) metaParts.push(sigDept.trim());
+          if (metaParts.length > 0) {
+            ctx.font = '12px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
+            ctx.fillStyle = '#64748b'; // slate gray
+            ctx.fillText(metaParts.join(' | '), 300, currentY);
+          }
+        }
+        
         const dataUrl = tempCanvas.toDataURL('image/png');
         onSave(dataUrl);
         onClose();
@@ -244,6 +330,46 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
               </div>
             </div>
           )}
+
+          {/* Metadata Credentials Inputs */}
+          <div style={metaFieldsContainerStyle}>
+            <span style={metaFieldsTitleStyle}>Credentials Overlay (Optional)</span>
+            <div style={metaFieldsGridStyle}>
+              <div style={inputWrapperStyle}>
+                <label style={inputLabelStyle}>Full Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={sigName}
+                  onChange={(e) => setSigName(e.target.value)}
+                  style={metaInputStyle}
+                  maxLength={25}
+                />
+              </div>
+              <div style={inputWrapperStyle}>
+                <label style={inputLabelStyle}>Designation</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Campaign Lead"
+                  value={sigDesignation}
+                  onChange={(e) => setSigDesignation(e.target.value)}
+                  style={metaInputStyle}
+                  maxLength={25}
+                />
+              </div>
+              <div style={inputWrapperStyle}>
+                <label style={inputLabelStyle}>Department</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Creative Ops"
+                  value={sigDept}
+                  onChange={(e) => setSigDept(e.target.value)}
+                  style={metaInputStyle}
+                  maxLength={25}
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Color Selector */}
           <div style={colorSelectorContainer}>
@@ -493,4 +619,51 @@ const saveButtonStyle: React.CSSProperties = {
   fontSize: '14px',
   transition: 'all 0.2s',
   boxShadow: '0 4px 12px var(--color-brand-glow)',
+};
+
+const metaFieldsContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+  marginTop: '12px',
+  paddingTop: '12px',
+  borderTop: '1px solid var(--border-color)',
+};
+
+const metaFieldsTitleStyle: React.CSSProperties = {
+  fontSize: '12px',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  color: 'var(--text-secondary)',
+};
+
+const metaFieldsGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 1fr',
+  gap: '10px',
+  width: '100%',
+};
+
+const inputWrapperStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+};
+
+const inputLabelStyle: React.CSSProperties = {
+  fontSize: '11px',
+  fontWeight: 500,
+  color: 'var(--text-muted)',
+};
+
+const metaInputStyle: React.CSSProperties = {
+  padding: '8px 10px',
+  backgroundColor: 'var(--bg-input)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-sm)',
+  color: 'var(--text-primary)',
+  fontSize: '13px',
+  outline: 'none',
+  transition: 'border-color 0.2s',
 };
