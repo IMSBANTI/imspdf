@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Edit2 } from 'lucide-react';
+import { X, Edit2, Upload } from 'lucide-react';
 
 interface SignatureModalProps {
   isOpen: boolean;
@@ -8,8 +8,9 @@ interface SignatureModalProps {
 }
 
 export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose, onSave }) => {
-  const [tab, setTab] = useState<'draw' | 'type'>('draw');
+  const [tab, setTab] = useState<'draw' | 'type' | 'upload'>('draw');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [typeText, setTypeText] = useState('');
   const [typeFont, setTypeFont] = useState<'cursive-1' | 'cursive-2' | 'serif'>('cursive-1');
@@ -17,6 +18,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
   const [sigName, setSigName] = useState('');
   const [sigDesignation, setSigDesignation] = useState('');
   const [sigDept, setSigDept] = useState('');
+  const [uploadedSigUrl, setUploadedSigUrl] = useState<string | null>(null);
 
   // Initialize canvas with proper DPI scaling
   useEffect(() => {
@@ -101,6 +103,18 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
     }
   };
 
+  const handleUploadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setUploadedSigUrl(event.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Compile and Save
   const handleSave = () => {
     const hasMetadata = sigName.trim() || sigDesignation.trim() || sigDept.trim();
@@ -170,7 +184,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
           onClose();
         }
       }
-    } else {
+    } else if (tab === 'type') {
       if (!typeText.trim()) {
         alert('Please type your signature.');
         return;
@@ -235,6 +249,79 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
         onSave(dataUrl);
         onClose();
       }
+    } else {
+      if (!uploadedSigUrl) {
+        alert('Please upload a signature image first.');
+        return;
+      }
+      
+      if (!hasMetadata) {
+        onSave(uploadedSigUrl);
+        onClose();
+      } else {
+        const img = new Image();
+        img.onload = () => {
+          const compoundCanvas = document.createElement('canvas');
+          compoundCanvas.width = 550;
+          compoundCanvas.height = 330;
+          const cCtx = compoundCanvas.getContext('2d');
+          if (cCtx) {
+            cCtx.clearRect(0, 0, 550, 330);
+            
+            // Draw image inside the top 220px box preserving aspect ratio
+            const maxW = 470;
+            const maxH = 180;
+            let w = img.width;
+            let h = img.height;
+            const ratio = w / h;
+            if (w > maxW) {
+              w = maxW;
+              h = w / ratio;
+            }
+            if (h > maxH) {
+              h = maxH;
+              w = h * ratio;
+            }
+            const x = (550 - w) / 2;
+            const y = (220 - h) / 2;
+            cCtx.drawImage(img, x, y, w, h);
+            
+            // Draw thin divider line
+            cCtx.strokeStyle = '#cbd5e1';
+            cCtx.lineWidth = 1.5;
+            cCtx.beginPath();
+            cCtx.moveTo(40, 230);
+            cCtx.lineTo(510, 230);
+            cCtx.stroke();
+            
+            // Draw credentials
+            cCtx.fillStyle = sigColor;
+            cCtx.textAlign = 'center';
+            cCtx.textBaseline = 'top';
+            
+            let currentY = 245;
+            if (sigName.trim()) {
+              cCtx.font = 'bold 15px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
+              cCtx.fillText(sigName.trim(), 275, currentY);
+              currentY += 22;
+            }
+            
+            const metaParts = [];
+            if (sigDesignation.trim()) metaParts.push(sigDesignation.trim());
+            if (sigDept.trim()) metaParts.push(sigDept.trim());
+            if (metaParts.length > 0) {
+              cCtx.font = '12px "Plus Jakarta Sans", "Helvetica Neue", sans-serif';
+              cCtx.fillStyle = '#64748b'; // slate gray
+              cCtx.fillText(metaParts.join(' | '), 275, currentY);
+            }
+            
+            const dataUrl = compoundCanvas.toDataURL('image/png');
+            onSave(dataUrl);
+            onClose();
+          }
+        };
+        img.src = uploadedSigUrl;
+      }
     }
   };
 
@@ -272,10 +359,16 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
           >
             Type Signature
           </button>
+          <button
+            style={tab === 'upload' ? activeTabStyle : tabStyle}
+            onClick={() => setTab('upload')}
+          >
+            Upload Image
+          </button>
         </div>
 
         <div style={modalBodyStyle}>
-          {tab === 'draw' ? (
+          {tab === 'draw' && (
             <div style={canvasWrapperStyle}>
               <canvas
                 ref={canvasRef}
@@ -294,7 +387,9 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
                 Clear Board
               </button>
             </div>
-          ) : (
+          )}
+
+          {tab === 'type' && (
             <div style={typeWrapperStyle}>
               <input
                 type="text"
@@ -328,6 +423,47 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose,
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {tab === 'upload' && (
+            <div style={uploadWrapperStyle}>
+              <input
+                type="file"
+                accept="image/png, image/jpeg, image/jpg"
+                onChange={handleUploadChange}
+                style={{ display: 'none' }}
+                ref={uploadInputRef}
+              />
+              
+              {!uploadedSigUrl ? (
+                <button
+                  style={uploadBoxStyle}
+                  onClick={() => uploadInputRef.current?.click()}
+                >
+                  <Upload size={24} style={{ color: 'var(--color-brand)', marginBottom: '8px' }} />
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                    Upload Hand-written Signature Image
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Supports PNG, JPG, or JPEG
+                  </span>
+                </button>
+              ) : (
+                <div style={uploadPreviewContainerStyle}>
+                  <img
+                    src={uploadedSigUrl}
+                    alt="Uploaded Signature Preview"
+                    style={uploadPreviewImageStyle}
+                  />
+                  <button
+                    style={changeSigButtonStyle}
+                    onClick={() => uploadInputRef.current?.click()}
+                  >
+                    Change Image
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -666,4 +802,63 @@ const metaInputStyle: React.CSSProperties = {
   fontSize: '13px',
   outline: 'none',
   transition: 'border-color 0.2s',
+};
+
+const uploadWrapperStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  width: '100%',
+};
+
+const uploadBoxStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '100%',
+  height: '220px',
+  backgroundColor: 'var(--bg-input)',
+  border: '2px dashed var(--border-color)',
+  borderRadius: 'var(--radius-md)',
+  cursor: 'pointer',
+  padding: '20px',
+  transition: 'all 0.2s',
+  outline: 'none',
+};
+
+const uploadPreviewContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '100%',
+  height: '220px',
+  backgroundColor: 'white',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-md)',
+  padding: '16px',
+  position: 'relative',
+};
+
+const uploadPreviewImageStyle: React.CSSProperties = {
+  maxHeight: '160px',
+  maxWidth: '100%',
+  objectFit: 'contain',
+};
+
+const changeSigButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  bottom: '10px',
+  right: '10px',
+  backgroundColor: 'rgba(15, 23, 42, 0.85)',
+  backdropFilter: 'blur(4px)',
+  border: '1px solid rgba(255, 255, 255, 0.15)',
+  color: '#ffffff',
+  padding: '4px 10px',
+  fontSize: '11px',
+  fontWeight: 500,
+  borderRadius: '4px',
+  cursor: 'pointer',
+  transition: 'background-color 0.2s',
 };
