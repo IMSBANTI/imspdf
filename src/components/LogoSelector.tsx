@@ -37,15 +37,23 @@ export const LogoSelector: React.FC<LogoSelectorProps> = ({ onSelectStamp }) => 
     ctx.strokeStyle = color;
     ctx.lineWidth = 5;
 
-    if (borderType === 'rounded') {
+    const drawRoundRectPath = (x: number, y: number, w: number, h: number, r: number) => {
       ctx.beginPath();
-      ctx.roundRect(10, 10, 280, 100, 15);
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    };
+
+    if (borderType === 'rounded') {
+      drawRoundRectPath(10, 10, 280, 100, 15);
       ctx.stroke();
       
       // inner subtle border
       ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.roundRect(16, 16, 268, 88, 10);
+      drawRoundRectPath(16, 16, 268, 88, 10);
       ctx.stroke();
     } else if (borderType === 'circle') {
       // draw circle/ellipse
@@ -96,7 +104,7 @@ export const LogoSelector: React.FC<LogoSelectorProps> = ({ onSelectStamp }) => 
         {/* IMS Logo Stamp */}
         {imsLogoBase64 && (
           <button
-            style={{ ...stampCardStyle, borderLeft: '4px solid #ef4444', gridColumn: 'span 2' }}
+            style={{ ...stampCardStyle, borderLeft: '4px solid #ef4444' }}
             onClick={() => onSelectStamp(imsLogoBase64)}
             title="Insert IMS Logo Stamp"
           >
@@ -203,8 +211,8 @@ const headingStyle: React.CSSProperties = {
 };
 
 const gridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+  display: 'flex',
+  flexDirection: 'column',
   gap: '10px',
 };
 
