@@ -8,7 +8,9 @@ import {
   Lock,
   Layers,
   Signature as SigIcon,
-  X
+  X,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 import type { Annotation } from './types/annotation';
@@ -57,6 +59,16 @@ export default function App() {
 
   // Modals
   const [isSigModalOpen, setIsSigModalOpen] = useState<boolean>(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  // Toggle theme class on body
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+  }, [theme]);
 
   // Undo / Redo stacks
   const [history, setHistory] = useState<Annotation[][]>([[]]);
@@ -493,6 +505,15 @@ export default function App() {
         )}
 
         <div style={headerActionsStyle}>
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            style={themeToggleButtonStyle}
+            title={theme === 'dark' ? 'Switch to White Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+            <span>{theme === 'dark' ? 'White Mode' : 'Dark Mode'}</span>
+          </button>
+
           <div style={badgeStyle}>
             <Lock size={12} />
             <span>100% Client-Side Private</span>
@@ -947,6 +968,21 @@ const badgeStyle: React.CSSProperties = {
   borderRadius: '20px',
   fontSize: '11px',
   fontWeight: 500,
+};
+
+const themeToggleButtonStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  backgroundColor: 'var(--bg-input)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '20px',
+  color: 'var(--text-primary)',
+  padding: '6px 14px',
+  fontSize: '12px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  transition: 'all 0.2s',
 };
 
 const navLinkStyle: React.CSSProperties = {

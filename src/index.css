@@ -134,3 +134,36 @@ body {
   border: 1px solid var(--color-brand);
   box-shadow: 0 0 0 2px var(--color-brand-glow);
 }
+
+/* Light theme overrides */
+body.light-theme {
+  --bg-app: #f4f6fa;
+  --bg-panel: rgba(255, 255, 255, 0.85);
+  --bg-panel-solid: #ffffff;
+  --bg-input: #eef2f6;
+  --bg-input-hover: #e2e8f0;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color-hover: rgba(0, 0, 0, 0.15);
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+}
+
+body.light-theme .glass-panel-interactive:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+body.light-theme ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+body.light-theme ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+body.light-theme .pdf-page-container {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
